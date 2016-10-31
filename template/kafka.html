@@ -1,0 +1,255 @@
+<div class="row" style="padding-top:20px;">
+    <div class="col-sm-3">
+        <div id="k_jstree">
+            <ul>
+                {% for cluster, topics in ktrees.iteritems() %}
+                <li data-jstree='{"icon":"/static/css/tree.png"}'>
+                    <a onclick='get_default_data("{{cluster}}")'>{{cluster}}</a>
+                    {% for topic, groups in sorted(topics['topic'].iteritems(), key=lambda x:x[0]) %}
+                    <ul>
+                        <li>
+                            <a onclick='get_default_data("{{cluster}}", "{{topic}}")'>{{topic}}</a>
+                            <ul>
+                                {% for group in sorted(groups.split(',')) %}
+                                <li data-jstree='{"icon":"/static/css/page.png"}'}'>
+                                    <a onclick='get_default_data("{{cluster}}", "{{topic}}", "{{group}}")'>{{group.strip()}}</a>
+                                </li>
+                                {% end %}
+                            </ul>
+                        </li>
+                    </ul>
+                    {% end %}
+                </li>
+                {% end %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-sm-9">
+        <div class="row"> 
+            <h2 id="notice"></h2>
+            <div id="kafka_page" class="col-md-12" style="padding-bottom:20px;">
+                <div class="panel panel-primary">
+                    <div class="panel-body">
+                        <div id="realtime"></div>
+                    </div>
+                </div>
+                <div id="date_div" class="panel-body">
+                    <button class="btn btn-xs btn-primary pull-right" id="daterange">
+                        Time Range
+                    </button>
+                </div>
+                <div class="panel-body">
+                    <div id="logsize"></div>
+                </div>
+                <div class="panel-body">
+                    <div id="offsets"></div>
+                </div>
+                <div class="panel-body">
+                    <div id="lag"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $("#k_jstree").jstree();
+    $('#kafka_page').hide();
+    var loading = '<p style="text-align:center"><img src="/static/loading.gif"/></p>'
+
+    Highcharts.setOptions({
+        global : {
+            useUTC : false
+        }
+    });
+
+    var allVisible = true
+    function set_series(chart) {
+        chart.series.forEach(function(serie){
+            serie.update({
+                visible:!allVisible
+            }, false)
+        })
+        chart.redraw()
+        allVisible = !allVisible
+    }
+
+    function get_default_data(cluster, topic, group) {
+
+        $(function () {
+            var start = moment().subtract(30, 'm').startOf('s');
+            var end = moment().startOf('s');
+    
+            function callback(start, end) {
+                get_timerange_data(
+                    start.format('YYYY-MM-DD HH:mm:ss'), 
+                    end.format('YYYY-MM-DD HH:mm:ss'), 
+                    cluster, topic, group
+                );
+            };
+    
+            $('#daterange').daterangepicker(
+                {
+                    timePicker: true,
+                    timePicker12Hour: false,
+                    ranges: {
+                        'Last 30 minuts': [moment().subtract(30, 'm').startOf('s'), moment().startOf('s')],
+                        'Last 1 hour': [moment().subtract(1, 'h'), moment()],
+                        'Last 3 hours': [moment().subtract(3, 'h'), moment()],
+                        'Last 6 hours': [moment().subtract(6, 'h'), moment()],
+                        'Last 12 hours': [moment().subtract(12, 'h'), moment()],
+                        'Last day': [moment().subtract(1, 'd').startOf('d'), moment().subtract(1, 'd').endOf('d')],
+                        'In recent 3 days': [moment().subtract(3, 'd'), moment()],
+                        'In recent 7 days': [moment().subtract(7, 'd'), moment()]
+                    },
+                    startDate: moment().subtract(30, 'm').startOf('s'),
+                    endDate: moment().startOf('s')
+                },
+                callback
+            );
+
+            callback(start, end);
+        });
+    }
+
+    function get_timerange_data(startTime, endTime, cluster, topic, group) {
+        if (topic && group) {
+            $("#logsize").html('');
+            $("#offsets").html(loading);
+            $("#lag").html('');
+        }
+        else {
+            $("#logsize").html(loading);
+            $("#offsets").html('');
+            $("#lag").html('');
+        } 
+        $.ajax({
+            url: "/",
+            type: "POST",
+            cache: false,
+            data: {
+                "method": "kafka",
+                "cluster": cluster,
+                "topic": topic,
+                "group": group,
+                "startTime": startTime,
+                "endTime": endTime
+            },
+            dataType: "json",
+            success: function (event) {
+                event = event.data
+                if (!event) {
+                    $("#notice").html('<font style="color:green">treeS</font> hasn’t collected any data yet. <p> Please try again later !');
+                    return
+                }
+                $("#notice").html('')
+                $('#kafka_page').show();
+                $("#realtime").html(event.realtime);
+
+                if (!topic && !group) {
+                    LogsizeChart = new Highcharts.Chart({
+                        chart: {
+                            renderTo: 'logsize',
+                            zoomType: 'x',
+                            type: 'spline'
+                        },
+                        title: {
+                            text: 'Logsize for each topic'
+                        },
+                        series: event.logsize,
+                        xAxis: {  
+                            type: 'datetime',  
+                            labels: {
+                                formatter: function () {  
+                                    return Highcharts.dateFormat('%H:%M', this.value);  
+                                }  
+                            }  
+                        },  
+                        credits: {
+                            enabled: false
+                        }
+                    })
+                    $("#logsize").append('<button type="button" class="btn btn-success btn-sm" onclick=set_series(LogsizeChart)>visiable</button>')
+                }
+                else if (topic && !group) {
+                    LogsizeChart = new Highcharts.Chart({
+                        chart: {
+                            renderTo: 'logsize',
+                            zoomType: 'x',
+                            type: 'spline'
+                        },
+                        title: {
+                            text: 'Logsize for each partition'
+                        },
+                        series: event.logsize,
+                        xAxis: {  
+                            type: 'datetime',  
+                            labels: {
+                                formatter: function () {  
+                                    return Highcharts.dateFormat('%H:%M', this.value);  
+                                }  
+                            }  
+                        },  
+                        credits: {
+                            enabled: false
+                        }
+                    })
+                    $("#logsize").append('<button type="button" class="btn btn-success btn-sm" onclick=set_series(LogsizeChart)>visiable</button>')
+                }
+                else if (topic && group) {
+                    offsetsChart = new Highcharts.Chart({
+                        chart: {
+                            renderTo: 'offsets',
+                            zoomType: 'x',
+                            type: 'spline'
+                        },
+                        title: {
+                            text: 'Offsets for each partition'
+                        },
+                        series: event.offsets,
+                        xAxis: {  
+                            type: 'datetime',  
+                            labels: {
+                                formatter: function () {  
+                                    return Highcharts.dateFormat('%H:%M', this.value);  
+                                }  
+                            }  
+                        },  
+                        credits: {
+                            enabled: false
+                        }
+                    })
+                    lagChart = new Highcharts.Chart({
+                        chart: {
+                            renderTo: 'lag',
+                            zoomType: 'x',
+                            type: 'spline'
+                        },
+                        title: {
+                            text: 'Lag for each partition'
+                        },
+                        series: event.lag,
+                        xAxis: {  
+                            type: 'datetime',  
+                            labels: {
+                                formatter: function () {  
+                                    return Highcharts.dateFormat('%H:%M', this.value);  
+                                }  
+                            }  
+                        },  
+                        credits: {
+                            enabled: false
+                        }
+                    })
+                    $("#offsets").append('<button type="button" class="btn btn-success btn-sm" onclick=set_series(offsetsChart)>visiable</button>')
+                    $("#lag").append('<button type="button" class="btn btn-success btn-sm" onclick=set_series(lagChart)>visiable</button>')
+                }
+    
+            },
+            error: function(jqXHR, stat, err_msg) {
+                alert("Error found: " + err_msg);
+            }
+        });
+    
+    };
+
+</script>

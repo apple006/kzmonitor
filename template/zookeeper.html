@@ -1,0 +1,268 @@
+<div class="row" style="padding-top:20px;">
+    <div class="col-sm-4">
+        <div id="z_jstree">
+            <ul>
+                {% for tree, data in ztrees.iteritems() %}
+                <li data-jstree='{"icon":"/static/css/tree.png"}'>
+                    <a>{{tree}}</a>
+                    <ul>
+                        <li>
+                            <a>servers</a>
+                            <ul>
+                                {% for server in data['server'].split(',') %}
+                                <li data-jstree='{"icon":"/static/css/page.png"}'>
+                                    <a onclick="get_stat('{{server.strip()}}')">{{server.strip()}}</a>
+                                </li>
+                                {% end %}
+                            </ul>
+                        </li>
+                        <li>
+                            <a>znodes</a>
+                            <ul>
+                                <li>
+                                    <a onclick="get_node(this.id, '{{data['server']}}', '/')">/</a>
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+                {% end %}
+            </ul>
+        </div>
+    </div>
+    <div class="col-sm-8">
+        <div class="row"> 
+            <div class="col-md-12">
+                <div id="statistics">
+                    <h4 style="text-align:center;">node statistics</h4>
+                    <div class="panel panel-primary">
+                        <div class="panel-body">
+                            <table id="mntr" class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="padding-right:0px;">alive</th>
+                                        <th style="padding-right:0px;">mode</th>
+                                        <th style="padding-right:0px;">client</th>
+                                        <th style="padding-right:0px;">recv</th>
+                                        <th style="padding-right:0px;">sent</th>
+                                        <th style="padding-right:0px;">outreq</th>
+                                        <th style="padding-right:0px;">watchs</th>
+                                        <th style="padding-right:0px;">znodes</th>
+                                        <th style="padding-right:0px;">opend</th>
+                                        <th style="padding-right:0px;">avglat</th>
+                                        <th style="padding-right:0px;">maxlat</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                    <br><br>
+                    <h4 style="text-align:center;">active client statistics</h4>
+                    <div class="panel panel-primary">
+                        <div class="panel-body">
+                            <table id="cons" class="table">
+                                <thead>
+                                    <tr>
+                                        <th>ip</th>
+                                        <th>port</th>
+                                        <th>recv</th>
+                                        <th>sent</th>
+                                        <th>est</th>
+                                        <th>lresp</th>
+                                        <th>avglat</th>
+                                        <th>maxlat</th>
+                                    </tr>
+                                </thead>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div id="statdata">
+                    <h4 style="text-align:center;">node path</h4>
+                    <div class="panel panel-primary">
+                        <div class="panel-body">
+                            <div id="name"></div>
+                        </div>
+                    </div>
+                    <h4 style="text-align:center;">node data</h4>
+                    <div class="panel panel-primary">
+                        <div class="panel-body">
+                            <div id="data"></div>
+                        </div>
+                    </div>
+                    <h4 style="text-align:center;">node stat</h4>
+                    <div class="panel panel-primary">
+                        <div class="panel-body">
+                            <textarea id="stat" rows="13" readonly="readonly" style="resize:none; width:100%; background:transparent;border-style:none;"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function toDate(timestamp) {
+        var theDate = new Date(Number(timestamp));
+        return theDate.format('yyyy-MM-dd h:m:s');
+    };
+    Date.prototype.format = function(format) {
+        var date = {
+            "M+": this.getMonth() + 1,
+            "d+": this.getDate(),
+            "h+": this.getHours(),
+            "m+": this.getMinutes(),
+            "s+": this.getSeconds(),
+            "q+": Math.floor((this.getMonth() + 3) / 3),
+            "S+": this.getMilliseconds()
+        };
+        if (/(y+)/i.test(format)) {
+            format = format.replace(RegExp.$1, (this.getFullYear() + '').substr(4 - RegExp.$1.length));
+        }
+        for (var k in date) {
+            if (new RegExp("(" + k + ")").test(format)) {
+                format = format.replace(RegExp.$1, RegExp.$1.length == 1
+                       ? date[k] : ("00" + date[k]).substr(("" + date[k]).length));
+            }
+        }
+        return format;
+    }
+    
+    $('#z_jstree').jstree({
+        'core' : {
+            "check_callback": true
+        }
+    });
+    
+    $('#statistics').hide();
+    $('#statdata').hide();
+    
+    function get_stat(server) {
+        $.ajax({
+            url: "/",
+            type: "POST",
+            data: {
+            	"method": 'zookeeper',
+                "metric": 'getStat',
+                "server": server
+            },
+            dataType: "json",
+            success: function (event) {
+                $('#mntr').DataTable({
+                    destroy: true,
+                    bInfo: false,
+                    bSort: false,
+                    bPaginate: false,
+                    searching: false,
+                    data: [[
+                        event.mntr.alive,
+                        event.mntr.zk_server_state,
+                        event.mntr.zk_num_alive_connections,
+                        event.mntr.zk_packets_received,
+                        event.mntr.zk_packets_sent,
+                        event.mntr.zk_outstanding_requests,
+                        event.mntr.zk_watch_count,
+                        event.mntr.zk_znode_count,
+                        event.mntr.zk_open_file_descriptor_count,
+                        event.mntr.zk_avg_latency,
+                        event.mntr.zk_max_latency
+                    ]]
+                });
+                $('#cons').DataTable({
+                    destroy: true,
+                    data: event.cons,
+                    columns: [
+                        {data: 'ip'},
+                        {data: 'port'},
+                        {data: 'recved'},
+                        {data: 'sent'},
+                        {data: 'est'},
+                        {data: 'lresp'},
+                        {data: 'avglat'},
+                        {data: 'maxlat'}
+                    ],
+                    "fnRowCallback": function(nRow, aData, iDisplayIndex, iDisplayIndexFull) {
+                        $('td:eq(4)', nRow).html(toDate(aData.est));
+                        $('td:eq(5)', nRow).html(toDate(aData.lresp));
+                    }
+                });
+                $('#statdata').hide();
+                $('#statistics').show();
+            },
+            error: function(jqXHR, stat, err_msg) {
+                alert("Error found: " + err_msg);
+            }
+        });
+    };
+    
+    function get_data(server, path) {
+        $('#statdata').show();
+        $('#statistics').hide();
+        $.ajax({
+            url: "/",
+            type: "POST",
+            data: {
+            	"method": 'zookeeper',
+                "metric": 'getData',
+                "server": server,
+                "path": path
+            },
+            dataType: "json",
+            success: function (event) {
+                $('#name').text(path);
+                $('#data').text(event.data ? event.data : 'null');
+                $('#stat').text(JSON.stringify(event.stat, null, 10));
+            },
+            error: function(jqXHR, stat, err_msg) {
+                alert("Error found: " + err_msg);
+            }
+        });
+    }
+    
+    function get_node(node, server, path) {
+        path = path ? path : '/'
+        get_data(server, path);
+    
+        $('#z_jstree').jstree(true).open_node(node, function(){
+            var children = $('#z_jstree').jstree(true).get_children_dom(node)
+            children.each(function(index, item){
+                $('#z_jstree').jstree(true).delete_node('#'+item.id);
+            })
+        })
+    
+        $.ajax({
+            url: "/",
+            type: "POST",
+            data: {
+            	"method": 'zookeeper',
+                "metric": 'getNode',
+                "server": server,
+                "path": path
+            },
+            dataType: "json",
+            success: function (event) {
+                event.forEach(function(item){
+                    $('#z_jstree').jstree(true).create_node(
+                        $('#'+node),
+                        {
+                            'text': item.name,
+                            'data': item.path,
+                            'icon': item.leaf ? true : 'static/css/page.png'
+                        },
+                        'last',
+                        function(el) {
+                            $(document).on('click', '#'+el.id+'_anchor', function(e, data){
+                                node = el.id
+                                path = el.data
+                                get_node(node, server, path)
+                            });
+                        }
+                    )
+                });
+            },
+            error: function(jqXHR, stat, err_msg) {
+                alert("Error found: " + err_msg);
+            }
+        });
+    }
+</script>
