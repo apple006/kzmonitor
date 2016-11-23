@@ -13,9 +13,8 @@ from concurrent.futures import ThreadPoolExecutor
 class Kafka(object):
     executor = ThreadPoolExecutor(20)
 
-    def __init__(self, brokers, version):
+    def __init__(self, brokers):
         self.brokers = brokers
-        self.version = version
         self.client = KafkaClient(brokers, timeout=5)
 
     def payload(self, topic, partitions):
@@ -61,7 +60,7 @@ class Kafka(object):
                 group_id = group,
                 bootstrap_servers = self.brokers,
                 enable_auto_commit = False,
-                api_version = self.version
+                api_version = (0, 8, 2)
             )
             tp = [ TopicPartition(topic, p) for p in partitions ]
             consumer.assign(tp)

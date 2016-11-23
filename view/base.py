@@ -23,7 +23,12 @@ class BaseHandler(object):
     cf = ConfigParser()
     cf.read(os.path.join(basedir, '../etc/trees.conf'))
 
-    rpool = ConnectionPool(host=cf.get('redis', 'host'), port=cf.getint('redis', 'port'))
+    rpool = ConnectionPool(
+        host = cf.get('redis', 'host'), 
+        port = cf.getint('redis', 'port'), 
+        db = cf.getint('redis', 'db'),
+        password = cf.get('redis', 'pass')
+    )
     redis = StrictRedis(connection_pool=rpool)
 
     def date_to_timestamp(self, datetime, formatter='%Y-%m-%d %H:%M:%S'):
@@ -44,7 +49,7 @@ class BaseHandler(object):
             for cluster in clusters:
                 data[cluster] = {}
                 topics = self.ktrees[cluster]['topic'].keys()
-                reader = Kafka(self.ktrees[cluster]['server'], self.ktrees[cluster]['version'])
+                reader = Kafka(self.ktrees[cluster]['server'])
 
                 for topic in topics:
                     data[cluster][topic] = {}
@@ -118,7 +123,11 @@ class BaseHandler(object):
         logsizeData, offsetsData, lagData = {}, {}, {}
 
         for data in rangedata:
-            metrics = json.loads(data[0])[cluster]
+            try:
+                metrics = json.loads(data[0])[cluster]
+            except KeyError as err:
+                continue
+                
             timestamp = data[1] * 1000
     
             for topic, _ in metrics.iteritems():
@@ -147,7 +156,10 @@ class BaseHandler(object):
     
                 # Make group level data
                 if topicName and groupName:
-                    groupData = metrics[topicName]['group'][groupName]
+                    try:
+                        groupData = metrics[topicName]['group'][groupName]
+                    except KeyError as err:
+                        continue
                     offsets = groupData['offsets']
                     lag = groupData['lag']
     
@@ -167,24 +179,30 @@ class BaseHandler(object):
                         # Get lag for each partition
                         if uniqKey not in lagData.keys():
                             lagData[uniqKey] = {'name': '%02s' % partition, 'data': []}
-    
-                        lagData[uniqKey]['data'].append(
-                            [ timestamp, lag[partition] ]
-                        )
+
+                        try:
+                            lagData[uniqKey]['data'].append(
+                                [ timestamp, lag[partition] ]
+                            )
+                        except KeyError as err:
+                            pass
     
         if logsizeData:
             self.kafka_highcharts_format(logsizeData, logsizeList)
+            logsizeList = sorted(logsizeList, key=lambda x:x['name'])
 
         if offsetsData:
             self.kafka_highcharts_format(offsetsData, offsetsList)
+            offsetsList = sorted(offsetsList, key=lambda x:x['name'])
 
         if lagData:
             self.kafka_highcharts_format(lagData, lagList)
+            lagList = sorted(lagList, key=lambda x:x['name'])
 
         return {
-            'logsize': sorted(logsizeList, key=lambda x:x['name']), 
-            'offsets': sorted(offsetsList, key=lambda x:x['name']), 
-            'lag': sorted(lagList, key=lambda x:x['name'])
+            'logsize': logsizeList, 
+            'offsets': offsetsList, 
+            'lag': lagList
         }
 
     def get_average_data(self, rangedata):
