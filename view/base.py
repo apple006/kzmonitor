@@ -143,8 +143,10 @@ class BaseHandler(object):
     
                 # Make topic level data
                 if topicName and not groupName:
-                    logsize = metrics[topicName]['logsize']
-    
+                    try:
+                        logsize = metrics[topicName]['logsize']
+                    except KeyError as err:
+                        continue    
                     # Get logsize for each partition
                     for partition, value in logsize.iteritems():
                         uniqKey = "%s_%s" % (topicName, partition)
