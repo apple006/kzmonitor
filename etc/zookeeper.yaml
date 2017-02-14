@@ -1,7 +1,15 @@
+# Example
+
+# 集群名称:
+    # server:
+        # - server1_ip:port
+        # - server2_ip:port
+
+# MyZookeeperCluster:
+    # server:
+        # - 10.0.0.1:2181
+        # - 10.0.0.2:2181
+
 Ci:
     server:
         - 10.128.7.219:2181
-
-# Pe:
-    # server:
-        # - 10.128.6.58:2181
