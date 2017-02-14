@@ -1,10 +1,7 @@
-# Configuration Example
-
-# <cluster1_name>:
-    # server:
-        # <broker1_address>:<port>,
-        # <broker2_address>:<port>
-
-zookeeper:
+Ci:
     server:
-        10.128.6.4:2181
+        - 10.128.7.219:2181
+
+# Pe:
+    # server:
+        # - 10.128.6.58:2181

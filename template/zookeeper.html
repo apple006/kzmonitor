@@ -1,100 +1,72 @@
 <div class="row" style="padding-top:20px;">
     <div class="col-sm-4">
-        <div id="z_jstree">
-            <ul>
-                {% for tree, data in ztrees.iteritems() %}
-                <li data-jstree='{"icon":"/static/css/tree.png"}'>
-                    <a>{{tree}}</a>
-                    <ul>
-                        <li>
-                            <a>servers</a>
-                            <ul>
-                                {% for server in data['server'].split(',') %}
-                                <li data-jstree='{"icon":"/static/css/page.png"}'>
-                                    <a onclick="get_stat('{{server.strip()}}')">{{server.strip()}}</a>
-                                </li>
-                                {% end %}
-                            </ul>
-                        </li>
-                        <li>
-                            <a>znodes</a>
-                            <ul>
-                                <li>
-                                    <a onclick="get_node(this.id, '{{data['server']}}', '/')">/</a>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-                {% end %}
-            </ul>
-        </div>
+        <div id="zookeeperTree"></div>
     </div>
     <div class="col-sm-8">
         <div class="row"> 
-            <div class="col-md-12">
-                <div id="statistics">
-                    <h4 style="text-align:center;">node statistics</h4>
-                    <div class="panel panel-primary">
-                        <div class="panel-body">
-                            <table id="mntr" class="table">
-                                <thead>
-                                    <tr>
-                                        <th style="padding-right:0px;">alive</th>
-                                        <th style="padding-right:0px;">mode</th>
-                                        <th style="padding-right:0px;">client</th>
-                                        <th style="padding-right:0px;">recv</th>
-                                        <th style="padding-right:0px;">sent</th>
-                                        <th style="padding-right:0px;">outreq</th>
-                                        <th style="padding-right:0px;">watchs</th>
-                                        <th style="padding-right:0px;">znodes</th>
-                                        <th style="padding-right:0px;">opend</th>
-                                        <th style="padding-right:0px;">avglat</th>
-                                        <th style="padding-right:0px;">maxlat</th>
-                                    </tr>
-                                </thead>
-                            </table>
-                        </div>
+            <div id="zookeeperPage" class="col-md-12" style="padding-bottom:20px;">
+                <div id="zkChartList">
+                    <div class="panel-body">
+                        <button id="zkDaterange" class="btn btn-xs btn-primary pull-right">选择时间</button>
                     </div>
-                    <br><br>
-                    <h4 style="text-align:center;">active client statistics</h4>
-                    <div class="panel panel-primary">
+                    <div class="panel panel-default">
+                        <div id="activeClient"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="receivePacket"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="sentPacket"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="outRequest"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="watchCount"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="znodeCount"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="dataSize"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="openFileCount"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="minLatency"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="avgLatency"></div>
+                    </div>
+                    <div class="panel panel-default">
+                        <div id="maxLatency"></div>
+                    </div>
+                </div>
+                <div id="zkServerStat">
+                    <div class="panel panel-default">
+                        <h4 style="text-align: center">Server 运行状态</h4>
+                        <div id="zkRealtime" class="panel-body"></div>
+                    </div>
+                    <div id="clientList" class="panel panel-default">
+                        <h4 style="text-align: center">Server 活跃客户端</h4>
                         <div class="panel-body">
-                            <table id="cons" class="table">
-                                <thead>
-                                    <tr>
-                                        <th>ip</th>
-                                        <th>port</th>
-                                        <th>recv</th>
-                                        <th>sent</th>
-                                        <th>est</th>
-                                        <th>lresp</th>
-                                        <th>avglat</th>
-                                        <th>maxlat</th>
-                                    </tr>
-                                </thead>
-                            </table>
+                            <table id="clientListTable" class="table table-striped"></table>
                         </div>
                     </div>
                 </div>
-                <div id="statdata">
-                    <h4 style="text-align:center;">node path</h4>
-                    <div class="panel panel-primary">
-                        <div class="panel-body">
-                            <div id="name"></div>
-                        </div>
+                <div id="zkNodeData">
+                    <div class="panel panel-default">
+                        <h4 style="text-align: center">znode 路径</h4>
+                        <div id="znodePath" class="panel-body"></div>
                     </div>
-                    <h4 style="text-align:center;">node data</h4>
-                    <div class="panel panel-primary">
-                        <div class="panel-body">
-                            <div id="data"></div>
-                        </div>
+                    <div class="panel panel-default">
+                        <h4 style="text-align: center">znode 数据</h4>
+                        <div id="znodeData" class="panel-body"></div>
                     </div>
-                    <h4 style="text-align:center;">node stat</h4>
-                    <div class="panel panel-primary">
-                        <div class="panel-body">
-                            <textarea id="stat" rows="13" readonly="readonly" style="resize:none; width:100%; background:transparent;border-style:none;"></textarea>
-                        </div>
+                    <div class="panel panel-default">
+                        <h4 style="text-align: center">znode 状态</h4>
+                        <textarea id="znodeStat" class="panel-body" rows="13" readonly="readonly" style="resize:none; width:100%; background:transparent;border-style:none;"></textarea>
                     </div>
                 </div>
             </div>
@@ -102,159 +74,207 @@
     </div>
 </div>
 <script>
-    function toDate(timestamp) {
-        var theDate = new Date(Number(timestamp));
-        return theDate.format('yyyy-MM-dd h:m:s');
-    };
-    Date.prototype.format = function(format) {
-        var date = {
-            "M+": this.getMonth() + 1,
-            "d+": this.getDate(),
-            "h+": this.getHours(),
-            "m+": this.getMinutes(),
-            "s+": this.getSeconds(),
-            "q+": Math.floor((this.getMonth() + 3) / 3),
-            "S+": this.getMilliseconds()
-        };
-        if (/(y+)/i.test(format)) {
-            format = format.replace(RegExp.$1, (this.getFullYear() + '').substr(4 - RegExp.$1.length));
-        }
-        for (var k in date) {
-            if (new RegExp("(" + k + ")").test(format)) {
-                format = format.replace(RegExp.$1, RegExp.$1.length == 1
-                       ? date[k] : ("00" + date[k]).substr(("" + date[k]).length));
-            }
-        }
-        return format;
-    }
-    
-    $('#z_jstree').jstree({
-        'core' : {
-            "check_callback": true
+    // 时间范围选择器
+    daterange("zkDaterange", timeRangeData);
+
+    $("#zkChartList").hide();
+    $("#zkServerStat").hide();
+    $("#zkNodeData").hide();
+
+    $.ajax({
+        url: "/zookeeper",
+        type: "POST",
+        data: {
+            "method": "jstree",
+        },
+        dataType: "json",
+        success: function (event) {
+            $("#zookeeperTree").jstree({
+                "core": {
+                    "data": event.data,
+                    "check_callback": true
+                }
+            })
+        },
+        error: function(jqXHR, stat, err_msg) {
+            alert("Error found: " + err_msg);
         }
     });
-    
-    $('#statistics').hide();
-    $('#statdata').hide();
-    
-    function get_stat(server) {
+
+    var g_cluster;
+    function zkClusterStat(cluster) {
+        g_cluster = cluster
+        var start = moment().subtract(30, "m").startOf("s");
+        var end = moment().startOf("s");
+        timeRangeData(start, end)
+    }
+
+    function timeRangeData(start, end) {
+        // 获取集群server的Hightcharts数据
+
+        $("#zkServerStat").hide();
+        $("#zkChartList").show();
+        $("#zkNodeData").hide();
+
+        // 加载loading
+        $("#activeClient").html(loading);
+        $("#receivePacket").html(loading);
+        $("#sentPacket").html(loading);
+        $("#outRequest").html(loading);
+        $("#watchCount").html(loading);
+        $("#znodeCount").html(loading);
+        $("#dataSize").html(loading);
+        $("#openFileCount").html(loading);
+        $("#minLatency").html(loading);
+        $("#avgLatency").html(loading);
+        $("#maxLatency").html(loading);
+
         $.ajax({
-            url: "/",
+            url: "/zookeeper",
             type: "POST",
             data: {
-            	"method": 'zookeeper',
-                "metric": 'getStat',
+                "method": "serverStat",
+                "cluster": g_cluster,
+                "start": start.format("YYYY-MM-DD HH:mm:ss"),
+                "end": end.format("YYYY-MM-DD HH:mm:ss")
+            },
+            dataType: "json",
+            success: function (event) {
+                // 生成highcharts图表
+                makeChart("activeClient", "活跃客户端", event.aliveClient);
+                makeChart("receivePacket", "收到的数据包", event.recvPkt);
+                makeChart("sentPacket", "发出的数据包", event.sentPkt);
+                makeChart("outRequest", "挂起的请求", event.outRest);
+                makeChart("watchCount", "watch 数量", event.watchCount);
+                makeChart("znodeCount", "node 数量", event.znodeCount);
+                makeChart("dataSize", "数据大小", event.dataSize);
+                makeChart("openFileCount", "打开的文件数量", event.openFileCount);
+                makeChart("minLatency", "请求最小延迟", event.minLatency);
+                makeChart("avgLatency", "请求平均延迟", event.avgLatency);
+                makeChart("maxLatency", "请求最大延迟", event.maxLatency);
+            },
+            error: function(jqXHR, stat, err_msg) {
+                alert("Error found: " + err_msg);
+            }
+        });
+    }
+
+    function zkServerStat(server) {
+        // 获取单个server的状态
+
+        $("#zkServerStat").show();
+        $("#zkChartList").hide();
+        $("#zkNodeData").hide();
+
+        $.ajax({
+            url: "/zookeeper",
+            type: "POST",
+            data: {
+                "method": 'getStat',
                 "server": server
             },
             dataType: "json",
             success: function (event) {
-                $('#mntr').DataTable({
-                    destroy: true,
-                    bInfo: false,
-                    bSort: false,
-                    bPaginate: false,
-                    searching: false,
-                    data: [[
-                        event.mntr.alive,
-                        event.mntr.zk_server_state,
-                        event.mntr.zk_num_alive_connections,
-                        event.mntr.zk_packets_received,
-                        event.mntr.zk_packets_sent,
-                        event.mntr.zk_outstanding_requests,
-                        event.mntr.zk_watch_count,
-                        event.mntr.zk_znode_count,
-                        event.mntr.zk_open_file_descriptor_count,
-                        event.mntr.zk_avg_latency,
-                        event.mntr.zk_max_latency
-                    ]]
-                });
-                $('#cons').DataTable({
-                    destroy: true,
-                    data: event.cons,
-                    columns: [
-                        {data: 'ip'},
-                        {data: 'port'},
-                        {data: 'recved'},
-                        {data: 'sent'},
-                        {data: 'est'},
-                        {data: 'lresp'},
-                        {data: 'avglat'},
-                        {data: 'maxlat'}
+                $("#zkRealtime").html(event.realtime);
+                $("#clientListTable").DataTable({
+                    "autoWidth": false,
+                    "aaSorting": [6, "desc"],
+                    "destroy": true,
+                    "aLengthMenu": [10, 20, 30, 50, 100],  
+                    "iDisplayLength": 20,
+                    "ajax": {
+                        url: "/zookeeper",
+                        type: "POST",
+                        data: {
+                            "method": "getClient",
+                            "server": server
+                        },
+                        cache: false,
+                        dataType: "json",
+                    },
+                    "columns": [
+                        {
+                            title: "客户端ip",
+                            data: "ip"
+                        },
+                        {
+                            title: "创建时间",
+                            data: "est"
+                        },
+                        {
+                            title: "响应时间",
+                            data: "lresp"
+                        },
+                        {
+                            title: "发送",
+                            data: "sent"
+                        },
+                        {
+                            title: "接收",
+                            data: "recved"
+                        },
+                        {
+                            title: "操作",
+                            data: "lop"
+                        },
+                        {
+                            title: "延迟",
+                            data: "llat"
+                        }
                     ],
                     "fnRowCallback": function(nRow, aData, iDisplayIndex, iDisplayIndexFull) {
-                        $('td:eq(4)', nRow).html(toDate(aData.est));
-                        $('td:eq(5)', nRow).html(toDate(aData.lresp));
+                        $('td:eq(1)', nRow).html(moment.unix(aData.est/1000).format('YYYY-MM-DD H:mm:ss'));
+                        $('td:eq(2)', nRow).html(moment.unix(aData.lresp/1000).format('YYYY-MM-DD H:mm:ss'));
                     }
-                });
-                $('#statdata').hide();
-                $('#statistics').show();
+                })
             },
             error: function(jqXHR, stat, err_msg) {
                 alert("Error found: " + err_msg);
             }
         });
-    };
-    
-    function get_data(server, path) {
-        $('#statdata').show();
-        $('#statistics').hide();
-        $.ajax({
-            url: "/",
-            type: "POST",
-            data: {
-            	"method": 'zookeeper',
-                "metric": 'getData',
-                "server": server,
-                "path": path
-            },
-            dataType: "json",
-            success: function (event) {
-                $('#name').text(path);
-                $('#data').text(event.data ? event.data : 'null');
-                $('#stat').text(JSON.stringify(event.stat, null, 10));
-            },
-            error: function(jqXHR, stat, err_msg) {
-                alert("Error found: " + err_msg);
-            }
-        });
+
     }
+
+    function zkGetNode(node, server, path) {
+        // 获取指定node中的资源
+        zkGetNodeData(server, path)
     
-    function get_node(node, server, path) {
-        path = path ? path : '/'
-        get_data(server, path);
-    
-        $('#z_jstree').jstree(true).open_node(node, function(){
-            var children = $('#z_jstree').jstree(true).get_children_dom(node)
+        // 删除已经加载过的资源
+        $("#zookeeperTree").jstree(true).open_node(node, function(){
+            var children = $("#zookeeperTree").jstree(true).get_children_dom(node);
+
             children.each(function(index, item){
-                $('#z_jstree').jstree(true).delete_node('#'+item.id);
-            })
+                $("#zookeeperTree").jstree(true).delete_node("#"+item.id);
+            });
         })
     
         $.ajax({
-            url: "/",
+            url: "/zookeeper",
             type: "POST",
             data: {
-                "method": 'zookeeper',
-                "metric": 'getNode',
+                "method": "getNode",
                 "server": server,
                 "path": path
             },
             dataType: "json",
             success: function (event) {
                 event.forEach(function(item){
-                    $('#z_jstree').jstree(true).create_node(
-                        $('#'+node),
+                    $("#zookeeperTree").jstree(true).create_node(
+                        $("#"+node),
                         {
-                            'text': item.name,
-                            'data': item.path,
-                            'icon': item.leaf ? true : 'static/css/page.png'
+                            "text": item.name,
+                            "data": item.path,
+                            "icon": item.leaf ? true : "/static/css/page.png",
+                            "state": {
+                                "opened": item.leaf
+                            }
                         },
-                        'last',
+                        "last",
                         function(el) {
-                            $(document).on('click', '#'+el.id+'_anchor', function(e, data){
+                            $(document).on("click", "#"+el.id+"_anchor", function(e, data){
                                 node = el.id
                                 path = el.data
-                                get_node(node, server, path)
+                                zkGetNode(node, server, path)
                             });
                         }
                     )
@@ -265,4 +285,33 @@
             }
         });
     }
+
+    function zkGetNodeData(server, path) {
+        // 获取指定znode节点信息
+
+        $("#zkServerStat").hide();
+        $("#zkChartList").hide();
+        $("#zkNodeData").show();
+
+        $.ajax({
+            url: "/zookeeper",
+            type: "POST",
+            data: {
+                "method": 'getData',
+                "server": server,
+                "path": path
+            },
+            dataType: "json",
+            success: function (event) {
+                $('#znodePath').text(path);
+                $('#znodeData').text(event.data ? event.data : 'null');
+                $('#znodeStat').text(JSON.stringify(event.stat, null, 10));
+            },
+            error: function(jqXHR, stat, err_msg) {
+                alert("Error found: " + err_msg);
+            }
+        });
+    }
+    
+
 </script>
